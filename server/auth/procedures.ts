@@ -51,9 +51,17 @@ export const authRouter = router({
    * Logout (revoke all tokens)
    */
   logout: protectedProcedure.mutation(async ({ ctx }) => {
-    await jwt.revokeAllUserSessions(ctx.user.id);
-    ctx.res.clearCookie(COOKIE_NAME, getSessionCookieOptions(ctx.req));
-    return { success: true };
+    try {
+      await jwt.revokeAllUserSessions(ctx.user.id);
+      ctx.res.clearCookie(COOKIE_NAME, getSessionCookieOptions(ctx.req));
+      return { success: true };
+    } catch (error) {
+      console.error('[Auth] Logout error:', error);
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to logout',
+      });
+    }
   }),
 
   /**
@@ -91,12 +99,20 @@ export const authRouter = router({
       const newPasswordHash = await bcrypt.hash(input.newPassword, 12);
 
       // Update password
-      await db.update(users)
-        .set({
-          passwordHash: newPasswordHash,
-          lastPasswordChange: new Date(),
-        })
-        .where(eq(users.id, ctx.user.id));
+      try {
+        await db.update(users)
+          .set({
+            passwordHash: newPasswordHash,
+            lastPasswordChange: new Date(),
+          })
+          .where(eq(users.id, ctx.user.id));
+      } catch (error) {
+        console.error('[Auth] Password update error:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to update password',
+        });
+      }
 
       // Revoke all sessions
       await jwt.revokeAllUserSessions(ctx.user.id);

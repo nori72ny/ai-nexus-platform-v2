@@ -179,8 +179,10 @@ export class SSEEventStoreRepository {
     return events.map(event => {
       try {
         return JSON.parse(event);
-      } catch {
-        return {};
+      } catch (error) {
+        console.error(`[SSEEventStoreRepository] Failed to parse event: ${event}`, error);
+        // Return empty object with error flag for caller to handle
+        return { _error: true, _raw: event };
       }
     });
   }
@@ -192,8 +194,10 @@ export class SSEEventStoreRepository {
     return events.map(event => {
       try {
         return JSON.parse(event);
-      } catch {
-        return {};
+      } catch (error) {
+        console.error(`[SSEEventStoreRepository] Failed to parse event since ${sinceEventId}: ${event}`, error);
+        // Return empty object with error flag for caller to handle
+        return { _error: true, _raw: event };
       }
     });
   }

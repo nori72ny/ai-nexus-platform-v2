@@ -282,4 +282,43 @@ export async function getAuditLogs(limit: number = 100, offset: number = 0) {
   return await db.select().from(auditLogs).orderBy(auditLogs.createdAt).limit(limit).offset(offset);
 }
 
-// TODO: add feature queries here as your schema grows.
+/**
+ * Get task with all related data
+ */
+export async function getTaskWithDetails(taskId: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database connection failed');
+  
+  const taskData = await db.select().from(tasks).where(eq(tasks.id, taskId));
+  if (!taskData.length) return null;
+  
+  const reportData = await db.select().from(reports).where(eq(reports.taskId, taskId));
+  return { ...taskData[0], reports: reportData };
+}
+
+/**
+ * Get report with all sections, citations, and graphs
+ */
+export async function getReportWithDetails(reportId: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database connection failed');
+  
+  const reportData = await db.select().from(reports).where(eq(reports.id, reportId));
+  if (!reportData.length) return null;
+  
+  const sectionData = await db.select().from(sections).where(eq(sections.reportId, reportId));
+  const citationData = await db.select().from(citations).where(eq(citations.reportId, reportId));
+  const graphData = await db.select().from(graphs).where(eq(graphs.reportId, reportId));
+  
+  return { ...reportData[0], sections: sectionData, citations: citationData, graphs: graphData };
+}
+
+/**
+ * Get AI results for a report
+ */
+export async function getAIResultsForReport(reportId: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database connection failed');
+  
+  return await db.select().from(aiResults).where(eq(aiResults.reportId, reportId));
+}

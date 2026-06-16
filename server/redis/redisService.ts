@@ -304,12 +304,16 @@ export class RedisService {
    * Get all hash fields
    */
   async getHashAll(key: string): Promise<Record<string, string>> {
-    if (!this.client) return {};
+    if (!this.client) {
+      console.warn('[RedisService] Redis client not initialized');
+      return {};
+    }
 
     try {
       return await this.client.hGetAll(key);
     } catch (error) {
       console.error(`[RedisService] Failed to get hash ${key}:`, error);
+      // Return empty object as fallback - caller should handle gracefully
       return {};
     }
   }

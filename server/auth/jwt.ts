@@ -95,7 +95,19 @@ export async function generateRefreshToken(
  */
 export async function verifyAccessToken(token: string): Promise<JWTPayload | null> {
   try {
+    // Validate token format
+    if (!token || typeof token !== 'string' || token.split('.').length !== 3) {
+      console.warn('[JWT] Invalid token format');
+      return null;
+    }
+
     const payload = jwt.verify(token, JWT_SECRET) as JWTPayload;
+
+    // Validate payload structure
+    if (!payload.sub || !payload.email || !payload.sessionId) {
+      console.warn('[JWT] Invalid token payload');
+      return null;
+    }
 
     // Check if token is revoked
     const tokenHash = hashToken(token);
@@ -111,11 +123,13 @@ export async function verifyAccessToken(token: string): Promise<JWTPayload | nul
     const tokenRecord = tokenRecords.length > 0 ? tokenRecords[0] : null;
 
     if (!tokenRecord || tokenRecord.revokedAt) {
+      console.warn('[JWT] Token revoked or not found');
       return null;
     }
 
     return payload;
   } catch (error) {
+    console.error('[JWT] Token verification error:', error);
     return null;
   }
 }
@@ -125,7 +139,19 @@ export async function verifyAccessToken(token: string): Promise<JWTPayload | nul
  */
 export async function verifyRefreshToken(token: string): Promise<JWTPayload | null> {
   try {
+    // Validate token format
+    if (!token || typeof token !== 'string' || token.split('.').length !== 3) {
+      console.warn('[JWT] Invalid refresh token format');
+      return null;
+    }
+
     const payload = jwt.verify(token, JWT_REFRESH_SECRET) as JWTPayload;
+
+    // Validate payload structure
+    if (!payload.sub || !payload.email || !payload.sessionId) {
+      console.warn('[JWT] Invalid refresh token payload');
+      return null;
+    }
 
     // Check if token is revoked
     const tokenHash = hashToken(token);
@@ -141,11 +167,13 @@ export async function verifyRefreshToken(token: string): Promise<JWTPayload | nu
     const tokenRecord = tokenRecords.length > 0 ? tokenRecords[0] : null;
 
     if (!tokenRecord || tokenRecord.revokedAt) {
+      console.warn('[JWT] Refresh token revoked or not found');
       return null;
     }
 
     return payload;
   } catch (error) {
+    console.error('[JWT] Refresh token verification error:', error);
     return null;
   }
 }

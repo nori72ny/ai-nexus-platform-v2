@@ -92,29 +92,35 @@ export const globalRateLimiter = (
   res: Response,
   next: NextFunction
 ) => {
-  const config: RateLimitConfig = {
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    maxRequests: 100,
-    statusCode: 429,
-    message: 'Too many requests, please try again later',
-  };
+  try {
+    const config: RateLimitConfig = {
+      windowMs: 15 * 60 * 1000, // 15 minutes
+      maxRequests: 100,
+      statusCode: 429,
+      message: 'Too many requests, please try again later',
+    };
 
-  const key = `global:${req.ip}`;
+    const key = `global:${req.ip || 'unknown'}`;
 
-  if (!store.isAllowed(key, config)) {
-    const resetTime = store.getResetTime(key);
-    res.set('Retry-After', String(Math.ceil((resetTime - Date.now()) / 1000)));
-    return res.status(config.statusCode || 429).json({
-      error: config.message,
-      retryAfter: Math.ceil((resetTime - Date.now()) / 1000),
-    });
+    if (!store.isAllowed(key, config)) {
+      const resetTime = store.getResetTime(key);
+      res.set('Retry-After', String(Math.ceil((resetTime - Date.now()) / 1000)));
+      return res.status(config.statusCode || 429).json({
+        error: config.message,
+        retryAfter: Math.ceil((resetTime - Date.now()) / 1000),
+      });
+    }
+
+    res.set('X-RateLimit-Limit', String(config.maxRequests));
+    res.set('X-RateLimit-Remaining', String(store.getRemaining(key, config)));
+    res.set('X-RateLimit-Reset', String(store.getResetTime(key)));
+
+    next();
+  } catch (error) {
+    console.error('[RateLimiter] Global limiter error:', error);
+    // On error, allow request to proceed
+    next();
   }
-
-  res.set('X-RateLimit-Limit', String(config.maxRequests));
-  res.set('X-RateLimit-Remaining', String(store.getRemaining(key, config)));
-  res.set('X-RateLimit-Reset', String(store.getResetTime(key)));
-
-  next();
 };
 
 /**
@@ -126,36 +132,42 @@ export const userRateLimiter = (
   res: Response,
   next: NextFunction
 ) => {
-  // Extract user ID from JWT token or session
-  const userId = (req as any).user?.id;
+  try {
+    // Extract user ID from JWT token or session
+    const userId = (req as any).user?.id;
 
-  if (!userId) {
-    return next(); // Skip rate limiting for unauthenticated requests
+    if (!userId) {
+      return next(); // Skip rate limiting for unauthenticated requests
+    }
+
+    const config: RateLimitConfig = {
+      windowMs: 60 * 60 * 1000, // 1 hour
+      maxRequests: 1000,
+      statusCode: 429,
+      message: 'User rate limit exceeded',
+    };
+
+    const key = `user:${userId}`;
+
+    if (!store.isAllowed(key, config)) {
+      const resetTime = store.getResetTime(key);
+      res.set('Retry-After', String(Math.ceil((resetTime - Date.now()) / 1000)));
+      return res.status(config.statusCode || 429).json({
+        error: config.message,
+        retryAfter: Math.ceil((resetTime - Date.now()) / 1000),
+      });
+    }
+
+    res.set('X-RateLimit-Limit', String(config.maxRequests));
+    res.set('X-RateLimit-Remaining', String(store.getRemaining(key, config)));
+    res.set('X-RateLimit-Reset', String(store.getResetTime(key)));
+
+    next();
+  } catch (error) {
+    console.error('[RateLimiter] User limiter error:', error);
+    // On error, allow request to proceed
+    next();
   }
-
-  const config: RateLimitConfig = {
-    windowMs: 60 * 60 * 1000, // 1 hour
-    maxRequests: 1000,
-    statusCode: 429,
-    message: 'User rate limit exceeded',
-  };
-
-  const key = `user:${userId}`;
-
-  if (!store.isAllowed(key, config)) {
-    const resetTime = store.getResetTime(key);
-    res.set('Retry-After', String(Math.ceil((resetTime - Date.now()) / 1000)));
-    return res.status(config.statusCode || 429).json({
-      error: config.message,
-      retryAfter: Math.ceil((resetTime - Date.now()) / 1000),
-    });
-  }
-
-  res.set('X-RateLimit-Limit', String(config.maxRequests));
-  res.set('X-RateLimit-Remaining', String(store.getRemaining(key, config)));
-  res.set('X-RateLimit-Reset', String(store.getResetTime(key)));
-
-  next();
 };
 
 /**

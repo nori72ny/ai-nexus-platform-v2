@@ -144,7 +144,13 @@ export default function History() {
                                 size="sm"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  // TODO: Implement delete functionality
+                                  // Delete report - call backend mutation
+                                  if (confirm('Are you sure you want to delete this report?')) {
+                                    // TODO: Add deleteReport mutation to tRPC
+                                    if (report) {
+                                      console.log('Delete report:', report.id);
+                                    }
+                                  }
                                 }}
                                 className="text-red-600 hover:bg-red-50"
                               >
