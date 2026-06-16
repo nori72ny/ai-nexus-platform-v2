@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, json, decimal, boolean } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, json, decimal, boolean, index } from "drizzle-orm/mysql-core";
 import { relations } from "drizzle-orm";
 
 /**
@@ -17,7 +17,12 @@ export const users = mysqlTable("users", {
   name: text("name"),
   email: varchar("email", { length: 320 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
-  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
+  role: mysqlEnum("role", ["user", "admin", "viewer"]).default("user").notNull(),
+  status: mysqlEnum("status", ["active", "suspended", "deleted"]).default("active").notNull(),
+  passwordHash: varchar("passwordHash", { length: 255 }),
+  twoFactorEnabled: boolean("twoFactorEnabled").default(false),
+  twoFactorSecret: varchar("twoFactorSecret", { length: 255 }),
+  lastPasswordChange: timestamp("lastPasswordChange"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
@@ -25,6 +30,56 @@ export const users = mysqlTable("users", {
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
+
+// JWT Tokens table - Token tracking and revocation
+export const jwtTokens = mysqlTable("jwt_tokens", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  tokenHash: varchar("tokenHash", { length: 255 }).notNull().unique(),
+  tokenType: mysqlEnum("tokenType", ["access", "refresh"]).notNull(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  revokedAt: timestamp("revokedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("idx_jwt_user_id").on(table.userId),
+  expiresAtIdx: index("idx_jwt_expires_at").on(table.expiresAt),
+}));
+
+export type JWTToken = typeof jwtTokens.$inferSelect;
+export type InsertJWTToken = typeof jwtTokens.$inferInsert;
+
+// User Sessions table - Session tracking
+export const userSessions = mysqlTable("user_sessions", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  tokenId: int("tokenId").notNull(),
+  ipAddress: varchar("ipAddress", { length: 45 }),
+  userAgent: text("userAgent"),
+  lastActivity: timestamp("lastActivity").defaultNow(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("idx_session_user_id").on(table.userId),
+  lastActivityIdx: index("idx_session_last_activity").on(table.lastActivity),
+}));
+
+export type UserSession = typeof userSessions.$inferSelect;
+export type InsertUserSession = typeof userSessions.$inferInsert;
+
+// API Keys table - For programmatic access
+export const apiKeys = mysqlTable("api_keys", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  keyHash: varchar("keyHash", { length: 255 }).notNull().unique(),
+  name: varchar("name", { length: 255 }).notNull(),
+  lastUsed: timestamp("lastUsed"),
+  revokedAt: timestamp("revokedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("idx_apikey_user_id").on(table.userId),
+}));
+
+export type APIKey = typeof apiKeys.$inferSelect;
+export type InsertAPIKey = typeof apiKeys.$inferInsert;
 
 // Tasks table - ユーザーが入力したタスク
 export const tasks = mysqlTable("tasks", {
@@ -172,8 +227,24 @@ export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
   user: one(users, { fields: [auditLogs.userId], references: [users.id] }),
 }));
 
+export const jwtTokensRelations = relations(jwtTokens, ({ one }) => ({
+  user: one(users, { fields: [jwtTokens.userId], references: [users.id] }),
+}));
+
+export const userSessionsRelations = relations(userSessions, ({ one }) => ({
+  user: one(users, { fields: [userSessions.userId], references: [users.id] }),
+  jwtToken: one(jwtTokens, { fields: [userSessions.tokenId], references: [jwtTokens.id] }),
+}));
+
+export const apiKeysRelations = relations(apiKeys, ({ one }) => ({
+  user: one(users, { fields: [apiKeys.userId], references: [users.id] }),
+}));
+
 export const usersRelations = relations(users, ({ many }) => ({
   tasks: many(tasks),
   reports: many(reports),
   auditLogs: many(auditLogs),
+  jwtTokens: many(jwtTokens),
+  sessions: many(userSessions),
+  apiKeys: many(apiKeys),
 }))

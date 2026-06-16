@@ -15,6 +15,13 @@
       "when": 1781571505901,
       "tag": "0001_skinny_multiple_man",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1781606456624,
+      "tag": "0002_cynical_piledriver",
+      "breakpoints": true
     }
   ]
 }
