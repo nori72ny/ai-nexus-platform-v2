@@ -1,0 +1,318 @@
+groups:
+  - name: ai_nexus_alerts
+    interval: 30s
+    rules:
+      # ========================================================================
+      # API Alerts
+      # ========================================================================
+
+      - alert: APIDown
+        expr: up{job="backend"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: api
+        annotations:
+          summary: "API is down"
+          description: "Backend API has been down for more than 2 minutes"
+
+      - alert: HighErrorRate
+        expr: |
+          (rate(errors_total[5m]) / rate(http_requests_total[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          service: api
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is above 5% for the last 5 minutes"
+
+      - alert: HighLatency
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+          service: api
+        annotations:
+          summary: "High API latency detected"
+          description: "95th percentile latency is above 1 second"
+
+      - alert: RateLimitExceeded
+        expr: rate(rate_limit_exceeded_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          service: api
+        annotations:
+          summary: "Rate limit exceeded frequently"
+          description: "Rate limit exceeded more than 10 times per minute"
+
+      # ========================================================================
+      # Database Alerts
+      # ========================================================================
+
+      - alert: DatabaseDown
+        expr: up{job="postgres"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: database
+        annotations:
+          summary: "Database is down"
+          description: "PostgreSQL database has been down for more than 2 minutes"
+
+      - alert: DatabaseSlowQueries
+        expr: histogram_quantile(0.95, rate(db_query_duration_seconds_bucket[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+          service: database
+        annotations:
+          summary: "Slow database queries detected"
+          description: "95th percentile query latency is above 1 second"
+
+      - alert: DatabaseConnectionPoolExhausted
+        expr: db_connections_active / 20 > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          service: database
+        annotations:
+          summary: "Database connection pool nearly exhausted"
+          description: "Connection pool usage is above 90%"
+
+      - alert: DatabaseHighErrorRate
+        expr: rate(db_query_errors_total[5m]) > 1
+        for: 5m
+        labels:
+          severity: warning
+          service: database
+        annotations:
+          summary: "High database error rate"
+          description: "Database errors detected at rate > 1 per second"
+
+      # ========================================================================
+      # Redis Alerts
+      # ========================================================================
+
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: redis
+        annotations:
+          summary: "Redis is down"
+          description: "Redis has been down for more than 2 minutes"
+
+      - alert: RedisHighLatency
+        expr: histogram_quantile(0.95, rate(redis_command_duration_seconds_bucket[5m])) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          service: redis
+        annotations:
+          summary: "High Redis latency detected"
+          description: "95th percentile Redis command latency is above 100ms"
+
+      - alert: RedisMemoryUsageHigh
+        expr: redis_memory_usage_bytes / (512 * 1024 * 1024) > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          service: redis
+        annotations:
+          summary: "Redis memory usage is high"
+          description: "Redis memory usage is above 90% of allocated memory"
+
+      - alert: RedisHighErrorRate
+        expr: rate(redis_command_errors_total[5m]) > 1
+        for: 5m
+        labels:
+          severity: warning
+          service: redis
+        annotations:
+          summary: "High Redis error rate"
+          description: "Redis errors detected at rate > 1 per second"
+
+      # ========================================================================
+      # AI Provider Alerts
+      # ========================================================================
+
+      - alert: AIProviderDown
+        expr: ai_provider_health_status == 0
+        for: 5m
+        labels:
+          severity: critical
+          service: ai_provider
+        annotations:
+          summary: "AI provider is down"
+          description: "AI provider {{ $labels.provider }} has been down for more than 5 minutes"
+
+      - alert: AIProviderHighLatency
+        expr: |
+          histogram_quantile(0.95, rate(ai_provider_request_duration_seconds_bucket[5m])) > 30
+        for: 5m
+        labels:
+          severity: warning
+          service: ai_provider
+        annotations:
+          summary: "High AI provider latency"
+          description: "AI provider {{ $labels.provider }} latency is above 30 seconds"
+
+      - alert: AIProviderHighErrorRate
+        expr: |
+          (rate(ai_provider_errors_total[5m]) / rate(ai_provider_requests_total[5m])) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          service: ai_provider
+        annotations:
+          summary: "High AI provider error rate"
+          description: "AI provider {{ $labels.provider }} error rate is above 10%"
+
+      - alert: AIProviderTokensExhausted
+        expr: ai_provider_tokens_used_total > 1000000
+        for: 1h
+        labels:
+          severity: warning
+          service: ai_provider
+        annotations:
+          summary: "AI provider tokens exhausted"
+          description: "AI provider {{ $labels.provider }} has used more than 1M tokens"
+
+      # ========================================================================
+      # SSE Alerts
+      # ========================================================================
+
+      - alert: SSEConnectionsHigh
+        expr: sse_connections_active > 1000
+        for: 5m
+        labels:
+          severity: warning
+          service: sse
+        annotations:
+          summary: "High number of SSE connections"
+          description: "More than 1000 active SSE connections"
+
+      - alert: SSEReconnectRate
+        expr: rate(sse_reconnects_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          service: sse
+        annotations:
+          summary: "High SSE reconnect rate"
+          description: "SSE reconnects detected at rate > 10 per minute"
+
+      # ========================================================================
+      # Authentication Alerts
+      # ========================================================================
+
+      - alert: HighLoginFailureRate
+        expr: |
+          (rate(auth_login_attempts_total{status="failed"}[5m]) / 
+           rate(auth_login_attempts_total[5m])) > 0.3
+        for: 5m
+        labels:
+          severity: warning
+          service: auth
+        annotations:
+          summary: "High login failure rate"
+          description: "Login failure rate is above 30%"
+
+      - alert: TokenBlacklistGrowing
+        expr: rate(auth_token_blacklist_size[5m]) > 100
+        for: 5m
+        labels:
+          severity: info
+          service: auth
+        annotations:
+          summary: "Token blacklist growing rapidly"
+          description: "Token blacklist size increasing at rate > 100 per minute"
+
+      # ========================================================================
+      # System Alerts
+      # ========================================================================
+
+      - alert: HighMemoryUsage
+        expr: system_memory_usage_bytes / (4 * 1024 * 1024 * 1024) > 0.85
+        for: 5m
+        labels:
+          severity: warning
+          service: system
+        annotations:
+          summary: "High memory usage"
+          description: "System memory usage is above 85%"
+
+      - alert: HighCPUUsage
+        expr: system_cpu_usage_percent > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: system
+        annotations:
+          summary: "High CPU usage"
+          description: "System CPU usage is above 80%"
+
+      - alert: HighDiskUsage
+        expr: system_disk_usage_percent > 85
+        for: 5m
+        labels:
+          severity: warning
+          service: system
+        annotations:
+          summary: "High disk usage"
+          description: "System disk usage is above 85%"
+
+      - alert: DiskSpaceCritical
+        expr: system_disk_usage_percent > 95
+        for: 2m
+        labels:
+          severity: critical
+          service: system
+        annotations:
+          summary: "Disk space critical"
+          description: "System disk usage is above 95%"
+
+      # ========================================================================
+      # Task Alerts
+      # ========================================================================
+
+      - alert: HighTaskFailureRate
+        expr: |
+          (rate(tasks_completed_total{status="failed"}[5m]) / 
+           rate(tasks_completed_total[5m])) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          service: tasks
+        annotations:
+          summary: "High task failure rate"
+          description: "Task failure rate is above 10%"
+
+      - alert: TasksBacklog
+        expr: tasks_active > 1000
+        for: 5m
+        labels:
+          severity: warning
+          service: tasks
+        annotations:
+          summary: "Large task backlog"
+          description: "More than 1000 active tasks in queue"
+
+      # ========================================================================
+      # Cache Alerts
+      # ========================================================================
+
+      - alert: LowCacheHitRate
+        expr: |
+          (rate(cache_hits_total[5m]) / 
+           (rate(cache_hits_total[5m]) + rate(cache_misses_total[5m]))) < 0.5
+        for: 5m
+        labels:
+          severity: info
+          service: cache
+        annotations:
+          summary: "Low cache hit rate"
+          description: "Cache hit rate is below 50%"
