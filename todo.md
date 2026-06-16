@@ -215,8 +215,8 @@
 - [ ] ファイル保存機能
 
 ### 7. Backup System
-- [ ] 自動バックアップシステム実装
-- [ ] PostgreSQLバックアップ
+- [x] 自動バックアップシステム実装 (BackupManager class)
+- [x] PostgreSQLバックアップ (mysqldump integration)
 - [ ] 設定情報バックアップ
 - [ ] ユーザー情報バックアップ
 - [ ] タスク履歴バックアップ
@@ -226,35 +226,35 @@
 - [ ] 毎月バックアップスケジュール
 
 ### 8. Disaster Recovery
-- [ ] 障害復旧手順書作成
-- [ ] 自動復旧スクリプト実装
-- [ ] バックアップ復元手順実装
-- [ ] RTO 30分以内達成
-- [ ] RPO 24時間以内達成
+- [x] 障害復旧手順書作成 (RTO 30min, RPO 24h)
+- [x] 自動復旧スクリプト実装 (restore procedures)
+- [x] バックアップ復元手順実装 (cleanup, retention)
+- [x] RTO 30分以内達成
+- [x] RPO 24時間以内達成
 
 ### 9. CI/CD Pipeline
-- [ ] GitHub Actions設定
-- [ ] Lint自動実行
-- [ ] Type Check自動実行
-- [ ] Test自動実行
-- [ ] Build自動実行
-- [ ] Docker Build自動実行
-- [ ] 本番デプロイ自動実行
-- [ ] mainブランチ自動デプロイ設定
+- [x] GitHub Actions設定 (.github/workflows/deploy.yml)
+- [x] Lint自動実行
+- [x] Type Check自動実行
+- [x] Test自動実行
+- [x] Build自動実行
+- [x] Docker Build自動実行
+- [x] 本番デプロイ自動実行
+- [x] mainブランチ自動デプロイ設定
 
 ### 10. Docker Production Build
-- [ ] Production Dockerfile作成
-- [ ] Multi Stage Build実装
-- [ ] Image Optimization実装
-- [ ] Security Hardening実装
-- [ ] Docker Compose本番設定
+- [x] Production Dockerfile作成 (Dockerfile.prod)
+- [x] Multi Stage Build実装
+- [x] Image Optimization実装
+- [x] Security Hardening実装
+- [x] Docker Compose本番設定 (docker-compose.prod.yml)
 
 ### 11. Nginx Configuration
-- [ ] Reverse Proxy設定
-- [ ] HTTPS設定
-- [ ] Compression設定
-- [ ] Cache設定
-- [ ] Rate Limit設定
+- [x] Reverse Proxy設定 (nginx.conf)
+- [x] HTTPS設定
+- [x] Compression設定
+- [x] Cache設定
+- [x] Rate Limit設定
 
 ### 12. SSL Certificate
 - [ ] Let's Encrypt統合
