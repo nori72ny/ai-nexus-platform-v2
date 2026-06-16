@@ -10,7 +10,7 @@ export interface AuditLogEntry {
   userId?: number;
   action: string;
   resourceType?: string;
-  resourceId?: number;
+  resourceId?: string | number;
   details?: Record<string, any>;
   ipAddress?: string;
   userAgent?: string;
@@ -38,11 +38,11 @@ export async function logAudit(req: Request, entry: AuditLogEntry): Promise<void
     await createAuditLog(
       entry.userId,
       entry.action,
-      entry.resourceType,
-      entry.resourceId,
+      entry.resourceType || undefined,
+      entry.resourceId ? String(entry.resourceId) : undefined,
       entry.details,
       ipAddress,
-      userAgent
+      userAgent as string | undefined
     );
   } catch (error) {
     console.error("Failed to create audit log:", error);

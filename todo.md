@@ -152,27 +152,27 @@
 ## Phase 6: Production & Deployment Build
 
 ### 1. Authentication System
-- [ ] JWT Authentication実装（Access Token・Refresh Token）
-- [ ] ロール定義（ADMIN・USER・VIEWER）
-- [ ] ログイン・ログアウト機能
-- [ ] セッション更新機能
-- [ ] パスワード変更機能
-- [ ] アカウント削除機能
+- [x] JWT Authentication実装（Access Token・Refresh Token）
+- [x] ロール定義（ADMIN・USER・VIEWER）
+- [x] ログイン・ログアウト機能
+- [x] セッション更新機能
+- [x] パスワード変更機能
+- [x] アカウント削除機能
 
 ### 2. User Management
 - [ ] ユーザー管理画面実装
-- [ ] ユーザー一覧表示
+- [x] ユーザー一覧表示 (tRPC procedure)
 - [ ] ユーザー作成機能
-- [ ] ユーザー停止機能
+- [x] ユーザー停止機能 (tRPC procedure)
 - [ ] ユーザー削除機能
-- [ ] ロール変更機能
-- [ ] 利用状況確認機能
+- [x] ロール変更機能 (tRPC procedure)
+- [x] 利用状況確認機能 (tRPC procedure)
 
 ### 3. API Security
-- [ ] Rate Limiting実装
-- [ ] IP制限機能
+- [x] Rate Limiting実装 (global, per-user, per-endpoint)
+- [x] IP制限機能 (IPFilter class)
 - [ ] Request Validation実装
-- [ ] API監査ログ実装
+- [x] API監査ログ実装 (audit logger system)
 - [ ] CORS制御設定
 - [ ] CSRF対策実装
 - [ ] XSS対策実装
@@ -207,7 +207,7 @@
 ### 6. Logging System
 - [ ] Structured Logging実装
 - [ ] JSON Log形式実装
-- [ ] 監査ログシステム
+- [x] 監査ログシステム (AuditLogType enum, logging functions)
 - [ ] エラーログシステム
 - [ ] アクセスログシステム
 - [ ] AI利用ログシステム

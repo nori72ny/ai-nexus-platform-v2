@@ -24,19 +24,12 @@ import { routeTask, executeMultipleAIs, performFactCheck, synthesizeReport } fro
 import { sseManager, createProgressEvent, createAIResultEvent, createFactCheckEvent, createReportEvent, createCompleteEvent } from "./sseHandler";
 import { generateReportPDF } from "./pdfExporter";
 import { logTaskCreated, logTaskStarted, logTaskCompleted, logTaskFailed, logReportGenerated } from "./auditLog";
+import { authRouter, userManagementRouter } from "./auth/procedures";
 
 export const appRouter = router({
   system: systemRouter,
-  auth: router({
-    me: publicProcedure.query((opts) => opts.ctx.user),
-    logout: publicProcedure.mutation(({ ctx }) => {
-      const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
-      return {
-        success: true,
-      } as const;
-    }),
-  }),
+  auth: authRouter,
+  users: userManagementRouter,
 
   task: router({
     create: protectedProcedure

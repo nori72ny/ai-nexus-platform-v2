@@ -256,18 +256,20 @@ export async function getAIResultsByReport(reportId: number) {
 }
 
 // Audit Log queries
-export async function createAuditLog(userId: number | undefined, action: string, resourceType?: string, resourceId?: number, details?: any, ipAddress?: string, userAgent?: string) {
+export async function createAuditLog(userId: number | undefined, action: string, resource?: string, resourceId?: string, details?: any, ipAddress?: string, userAgent?: string, status: 'success' | 'failure' = 'success', errorMessage?: string) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
   const result = await db.insert(auditLogs).values({
-    userId,
+    userId: userId || null,
     action,
-    resourceType,
-    resourceId,
-    details,
-    ipAddress,
-    userAgent,
+    resource: resource || null,
+    resourceId: resourceId || null,
+    details: details || null,
+    ipAddress: ipAddress || null,
+    userAgent: userAgent || null,
+    status,
+    errorMessage: errorMessage || null,
   });
   
   return result;
