@@ -1,4 +1,4 @@
-import { protectedProcedure, publicProcedure, router } from '../_core/trpc';
+import { protectedProcedure, publicProcedure, adminProcedure, router } from '../_core/trpc';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { getDb } from '../db';
@@ -6,19 +6,10 @@ import { users, tasks, reports } from '../../drizzle/schema';
 import { eq } from 'drizzle-orm';
 import * as jwt from './jwt';
 import bcrypt from 'bcrypt';
+import { getSessionCookieOptions } from '../_core/cookies';
+import { COOKIE_NAME } from '../../shared/const';
 
-/**
- * Admin-only procedure
- */
-export const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
-  if (ctx.user.role !== 'admin') {
-    throw new TRPCError({
-      code: 'FORBIDDEN',
-      message: 'Admin access required',
-    });
-  }
-  return next({ ctx });
-});
+
 
 /**
  * Authentication router
@@ -61,6 +52,7 @@ export const authRouter = router({
    */
   logout: protectedProcedure.mutation(async ({ ctx }) => {
     await jwt.revokeAllUserSessions(ctx.user.id);
+    ctx.res.clearCookie(COOKIE_NAME, getSessionCookieOptions(ctx.req));
     return { success: true };
   }),
 

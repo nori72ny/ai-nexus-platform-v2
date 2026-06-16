@@ -1,6 +1,6 @@
-import { Resource } from '@opentelemetry/resources';
+import { resourceFromAttributes, defaultResource } from '@opentelemetry/resources';
 import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions';
-import { BasicTracerProvider, BatchSpanProcessor } from '@opentelemetry/sdk-trace-node';
+import { BasicTracerProvider, SimpleSpanProcessor } from '@opentelemetry/sdk-trace-node';
 import { trace, context, SpanStatusCode } from '@opentelemetry/api';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 
@@ -10,16 +10,14 @@ import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
  */
 
 // Initialize tracer provider
-const resource = Resource.default().merge(
-  new Resource({
-    [SemanticResourceAttributes.SERVICE_NAME]: 'ai-nexus-platform',
-    [SemanticResourceAttributes.SERVICE_VERSION]: process.env.APP_VERSION || '1.0.0',
-    environment: process.env.NODE_ENV || 'development',
-  })
-);
+const resource = resourceFromAttributes({
+  [SemanticResourceAttributes.SERVICE_NAME]: 'ai-nexus-platform',
+  [SemanticResourceAttributes.SERVICE_VERSION]: process.env.APP_VERSION || '1.0.0',
+  environment: process.env.NODE_ENV || 'development',
+});
 
 const tracerProvider = new BasicTracerProvider({
-  resource,
+  resource: resource || defaultResource,
 });
 
 // Configure OTLP exporter
@@ -30,7 +28,8 @@ const otlpExporter = new OTLPTraceExporter({
   },
 });
 
-tracerProvider.addSpanProcessor(new BatchSpanProcessor(otlpExporter));
+// Add span processor with type assertion
+(tracerProvider as any).addSpanProcessor(new SimpleSpanProcessor(otlpExporter));
 
 // Initialize global tracer
 trace.setGlobalTracerProvider(tracerProvider);
@@ -116,7 +115,7 @@ export function tracingMiddleware(req: any, res: any, next: any) {
 export function traceDbQuery(operation: string, table: string, fn: () => Promise<any>) {
   const span = tracer.startSpan(`db.${operation}`, {
     attributes: {
-      'db.system': 'postgresql',
+      'db.system': 'mysql',
       'db.operation': operation,
       'db.table': table,
     },

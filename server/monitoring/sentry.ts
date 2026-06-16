@@ -1,5 +1,5 @@
 import * as Sentry from '@sentry/node';
-import { ProfilingIntegration } from '@sentry/profiling-node';
+import { nodeProfilingIntegration } from '@sentry/profiling-node';
 
 /**
  * Sentry Configuration for Backend
@@ -14,10 +14,7 @@ export function initializeSentry() {
     tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
     profilesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
     integrations: [
-      new ProfilingIntegration(),
-      new Sentry.Integrations.Http({ tracing: true }),
-      new Sentry.Integrations.OnUncaughtException(),
-      new Sentry.Integrations.OnUnhandledRejection(),
+      nodeProfilingIntegration(),
     ],
     beforeSend(event: any, hint: any) {
       // Filter out certain errors
@@ -36,38 +33,42 @@ export function initializeSentry() {
 }
 
 /**
- * Express middleware for Sentry
+ * Express middleware for Sentry request handling
  */
-export function sentryMiddleware() {
-  return [
-    Sentry.Handlers.requestHandler(),
-    Sentry.Handlers.tracingHandler(),
-  ];
+export function sentryRequestHandler() {
+  return (req: any, res: any, next: any) => {
+    // Add request ID to Sentry context
+    const requestId = req.headers['x-request-id'] || `req_${Date.now()}`;
+    Sentry.setTag('request_id', requestId);
+    next();
+  };
 }
 
 /**
- * Error handler middleware for Sentry
+ * Express middleware for Sentry error handling
  */
 export function sentryErrorHandler() {
-  return Sentry.Handlers.errorHandler();
+  return (err: any, req: any, res: any, next: any) => {
+    Sentry.captureException(err);
+    next(err);
+  };
 }
 
 /**
- * Capture exception with context
+ * Capture exception
  */
-export function captureException(error: Error, context: Record<string, any> = {}) {
-  Sentry.withScope((scope: any) => {
-    Object.entries(context).forEach(([key, value]) => {
-      scope.setContext(key, value);
-    });
-    Sentry.captureException(error);
+export function captureException(error: Error, context?: Record<string, any>) {
+  Sentry.captureException(error, {
+    contexts: {
+      custom: context || {},
+    },
   });
 }
 
 /**
- * Capture message with level
+ * Capture message
  */
-export function captureMessage(message: string, level: 'fatal' | 'error' | 'warning' | 'info' | 'debug' = 'info') {
+export function captureMessage(message: string, level: Sentry.SeverityLevel = 'info') {
   Sentry.captureMessage(message, level);
 }
 
@@ -90,131 +91,87 @@ export function clearUserContext() {
 }
 
 /**
- * Set tags for event filtering
+ * Add breadcrumb
  */
-export function setTags(tags: Record<string, string>) {
-  Object.entries(tags).forEach(([key, value]) => {
-    Sentry.setTag(key, value);
+export function addBreadcrumb(message: string, category: string, level: Sentry.SeverityLevel = 'info', data?: Record<string, any>) {
+  Sentry.addBreadcrumb({
+    message,
+    category,
+    level,
+    data,
   });
 }
 
 /**
- * Set extra context
+ * Set tag
  */
-export function setExtra(key: string, value: any) {
-  Sentry.setContext(key, value);
+export function setTag(key: string, value: string | number | boolean) {
+  Sentry.setTag(key, value);
 }
 
 /**
- * Start performance transaction
+ * Set context
  */
-export function startTransaction(name: string, op: string) {
-  return Sentry.startTransaction({
-    name,
-    op,
+export function setContext(name: string, context: Record<string, any>) {
+  Sentry.setContext(name, context);
+}
+
+/**
+ * Track API request performance
+ */
+export function trackApiRequest(method: string, path: string, statusCode: number, duration: number) {
+  addBreadcrumb(`${method} ${path} - ${statusCode}`, 'http', statusCode >= 400 ? 'warning' : 'info', {
+    statusCode,
+    duration,
   });
 }
 
 /**
- * Capture AI provider performance
+ * Track database query performance
  */
-export function captureAiProviderPerformance(
-  provider: string,
-  model: string,
-  duration: number,
-  tokensUsed: number,
-  cost: number
-) {
-  const transaction = Sentry.startTransaction({
-    name: `AI Provider: ${provider}`,
-    op: 'ai.request',
+export function trackDatabaseQuery(query: string, duration: number, success: boolean) {
+  addBreadcrumb(query.substring(0, 100), 'database', success ? 'info' : 'warning', {
+    duration,
+    success,
   });
-
-  transaction.setData('provider', provider);
-  transaction.setData('model', model);
-  transaction.setData('duration_ms', duration);
-  transaction.setData('tokens_used', tokensUsed);
-  transaction.setData('cost', cost);
-
-  transaction.finish();
 }
 
 /**
- * Capture database query performance
+ * Track AI provider request performance
  */
-export function captureDbQueryPerformance(
-  operation: string,
-  table: string,
-  duration: number,
-  rowsAffected: number
-) {
-  const transaction = Sentry.startTransaction({
-    name: `DB: ${operation} ${table}`,
-    op: 'db.query',
+export function trackAiProviderRequest(provider: string, model: string, duration: number, success: boolean, tokens?: number) {
+  addBreadcrumb(`${provider} - ${model}`, 'ai', success ? 'info' : 'warning', {
+    duration,
+    success,
+    tokens,
   });
-
-  transaction.setData('operation', operation);
-  transaction.setData('table', table);
-  transaction.setData('duration_ms', duration);
-  transaction.setData('rows_affected', rowsAffected);
-
-  transaction.finish();
 }
 
 /**
- * Capture Redis command performance
+ * Track task execution
  */
-export function captureRedisCommandPerformance(command: string, duration: number) {
-  const transaction = Sentry.startTransaction({
-    name: `Redis: ${command}`,
-    op: 'redis.command',
+export function trackTaskExecution(taskId: string, taskType: string, duration: number, success: boolean, result?: any) {
+  addBreadcrumb(`Task: ${taskType}`, 'task', success ? 'info' : 'warning', {
+    taskId,
+    duration,
+    success,
+    result: result ? JSON.stringify(result).substring(0, 100) : undefined,
   });
-
-  transaction.setData('command', command);
-  transaction.setData('duration_ms', duration);
-
-  transaction.finish();
 }
 
 /**
- * Capture SSE event
+ * Track SSE event
  */
-export function captureSseEvent(eventType: string, clientCount: number, deliveryTime: number) {
-  const transaction = Sentry.startTransaction({
-    name: `SSE: ${eventType}`,
-    op: 'sse.event',
+export function trackSseEvent(eventType: string, userId: string, data?: any) {
+  addBreadcrumb(`SSE: ${eventType}`, 'sse', 'info', {
+    userId,
+    data: data ? JSON.stringify(data).substring(0, 100) : undefined,
   });
-
-  transaction.setData('event_type', eventType);
-  transaction.setData('client_count', clientCount);
-  transaction.setData('delivery_time_ms', deliveryTime);
-
-  transaction.finish();
 }
 
 /**
- * Capture authentication event
- */
-export function captureAuthEvent(eventType: 'login' | 'logout' | 'token_refresh', success: boolean, userId?: string) {
-  const transaction = Sentry.startTransaction({
-    name: `Auth: ${eventType}`,
-    op: 'auth.event',
-  });
-
-  transaction.setData('event_type', eventType);
-  transaction.setData('success', success);
-  if (userId) {
-    transaction.setData('user_id', userId);
-  }
-
-  transaction.finish();
-}
-
-/**
- * Flush Sentry before shutdown
+ * Flush Sentry before process exit
  */
 export async function flushSentry() {
   await Sentry.close(2000);
 }
-
-export default Sentry;
