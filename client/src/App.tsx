@@ -5,31 +5,45 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
+import Login from "./pages/Login";
+import Dashboard from "./pages/Dashboard";
+import TaskProgress from "./pages/TaskProgress";
+import Report from "./pages/Report";
+import History from "./pages/History";
+import TaskDetail from "./pages/TaskDetail";
+import ReportList from "./pages/ReportList";
 
 function Router() {
-  // make sure to consider if you need authentication for certain routes
+  const rootPath = "/";
+  const loginPath = "/login";
+  const dashboardPath = "/dashboard";
+  const historyPath = "/history";
+  const taskDetailPath = "/task-detail/:taskId";
+  const taskProgressPath = "/task-progress/:taskId";
+  const reportListPath = "/reports";
+  const reportPath = "/report/:reportId";
+  const notFoundPath = "/404";
+
   return (
     <Switch>
-      <Route path={"/"} component={Home} />
-      <Route path={"/404"} component={NotFound} />
-      {/* Final fallback route */}
+      <Route path={rootPath} component={Home} />
+      <Route path={loginPath} component={Login} />
+      <Route path={dashboardPath} component={Dashboard} />
+      <Route path={historyPath} component={History} />
+      <Route path={taskDetailPath} component={TaskDetail} />
+      <Route path={taskProgressPath} component={TaskProgress} />
+      <Route path={reportListPath} component={ReportList} />
+      <Route path={reportPath} component={Report} />
+      <Route path={notFoundPath} component={NotFound} />
       <Route component={NotFound} />
     </Switch>
   );
 }
 
-// NOTE: About Theme
-// - First choose a default theme according to your design style (dark or light bg), than change color palette in index.css
-//   to keep consistent foreground/background color across components
-// - If you want to make theme switchable, pass `switchable` ThemeProvider and use `useTheme` hook
-
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider
-        defaultTheme="light"
-        // switchable
-      >
+      <ThemeProvider defaultTheme="light">
         <TooltipProvider>
           <Toaster />
           <Router />
