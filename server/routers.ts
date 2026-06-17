@@ -39,7 +39,10 @@ export const appRouter = router({
       }))
       .mutation(async ({ ctx, input }) => {
         const result = await createTask(ctx.user.id, input.title, input.description);
-        const taskId = (result as any).insertId || 0;
+        const taskId = (result as any)?.insertId || 0;
+        if (!taskId) {
+          throw new Error('Failed to create task: no ID returned');
+        }
         await logTaskCreated(ctx.req, ctx.user.id, taskId, input.title);
         return { success: true, taskId };
       }),
