@@ -9,6 +9,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { setupSSEEndpoint } from "../sseEndpoint";
+import { registerScheduledRoutes } from "../routes/scheduledTasks";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -37,6 +38,7 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   registerStorageProxy(app);
   registerOAuthRoutes(app);
+  registerScheduledRoutes(app);
   setupSSEEndpoint(app);
   // tRPC API
   app.use(
