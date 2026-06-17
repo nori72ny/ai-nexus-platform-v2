@@ -101,7 +101,16 @@ export async function createTask(userId: number, title: string, description?: st
     status: "pending",
   });
   
-  return result;
+  // Get the inserted task ID from the result
+  // Drizzle returns { insertId, rowsAffected }
+  const insertedId = (result as any)?.insertId || (result as any)?.[0]?.id;
+  if (!insertedId) {
+    throw new Error('Failed to get inserted task ID');
+  }
+  
+  // Fetch and return the actual inserted task
+  const insertedTask = await db.select().from(tasks).where(eq(tasks.id, insertedId)).limit(1);
+  return insertedTask[0];
 }
 
 export async function getTasksByUser(userId: number) {
