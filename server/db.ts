@@ -1,5 +1,5 @@
-import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
+import { eq, and } from "drizzle-orm";
 import { InsertUser, users, tasks, reports, sections, citations, graphs, aiResults, auditLogs } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -111,11 +111,20 @@ export async function getTasksByUser(userId: number) {
   return await db.select().from(tasks).where(eq(tasks.userId, userId));
 }
 
-export async function getTaskById(taskId: number) {
+export async function getTaskById(taskId: number, userId?: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  const result = await db.select().from(tasks).where(eq(tasks.id, taskId)).limit(1);
+  let query = db.select().from(tasks).where(eq(tasks.id, taskId));
+  
+  // If userId is provided, ensure the task belongs to that user
+  if (userId !== undefined) {
+    query = db.select().from(tasks).where(
+      and(eq(tasks.id, taskId), eq(tasks.userId, userId))
+    );
+  }
+  
+  const result = await query.limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
 

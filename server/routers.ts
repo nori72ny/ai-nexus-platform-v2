@@ -50,8 +50,8 @@ export const appRouter = router({
 
     getDetail: protectedProcedure
       .input((input: any) => Number(input.taskId))
-      .query(async ({ input }) => {
-        return await getTaskById(input);
+      .query(async ({ ctx, input }) => {
+        return await getTaskById(input, ctx.user.id);
       }),
   }),
 
