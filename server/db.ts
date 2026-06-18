@@ -94,6 +94,7 @@ export async function createTask(userId: number, title: string, description?: st
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
+  // Insert the task
   const result = await db.insert(tasks).values({
     userId,
     title,
@@ -101,15 +102,18 @@ export async function createTask(userId: number, title: string, description?: st
     status: "pending",
   });
   
-  // Get the inserted task ID from the result
-  // Drizzle returns { insertId, rowsAffected }
-  const insertedId = (result as any)?.insertId || (result as any)?.[0]?.id;
-  if (!insertedId) {
-    throw new Error('Failed to get inserted task ID');
+  // For MySQL, get the last insert ID from the result
+  const insertId = (result as any)?.insertId;
+  if (!insertId) {
+    throw new Error('Failed to get inserted task ID from database');
   }
   
   // Fetch and return the actual inserted task
-  const insertedTask = await db.select().from(tasks).where(eq(tasks.id, insertedId)).limit(1);
+  const insertedTask = await db.select().from(tasks).where(eq(tasks.id, insertId)).limit(1);
+  if (!insertedTask || insertedTask.length === 0) {
+    throw new Error('Failed to fetch newly created task');
+  }
+  
   return insertedTask[0];
 }
 
