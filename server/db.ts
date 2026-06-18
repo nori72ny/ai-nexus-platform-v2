@@ -1,5 +1,5 @@
 import { drizzle } from "drizzle-orm/mysql2";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import { InsertUser, users, tasks, reports, sections, citations, graphs, aiResults, auditLogs } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -95,26 +95,25 @@ export async function createTask(userId: number, title: string, description?: st
   if (!db) throw new Error("Database not available");
   
   // Insert the task
-  const result = await db.insert(tasks).values({
+  await db.insert(tasks).values({
     userId,
     title,
     description,
     status: "pending",
   });
   
-  // For MySQL, get the last insert ID from the result
-  const insertId = (result as any)?.insertId;
-  if (!insertId) {
-    throw new Error('Failed to get inserted task ID from database');
+  // Get the most recently created task for this user
+  // This avoids relying on Drizzle's insertId which may not be reliable
+  const recentTasks = await db.select().from(tasks)
+    .where(eq(tasks.userId, userId))
+    .orderBy(desc(tasks.id))
+    .limit(1);
+  
+  if (!recentTasks || recentTasks.length === 0) {
+    throw new Error('Failed to retrieve newly created task');
   }
   
-  // Fetch and return the actual inserted task
-  const insertedTask = await db.select().from(tasks).where(eq(tasks.id, insertId)).limit(1);
-  if (!insertedTask || insertedTask.length === 0) {
-    throw new Error('Failed to fetch newly created task');
-  }
-  
-  return insertedTask[0];
+  return recentTasks[0];
 }
 
 export async function getTasksByUser(userId: number) {
