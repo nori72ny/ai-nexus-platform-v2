@@ -53,7 +53,12 @@ export const appRouter = router({
     }),
 
     getDetail: protectedProcedure
-      .input((input: any) => Number(input.taskId))
+      .input((input: any) => {
+        // Accept either a number directly or an object with taskId property
+        const taskId = typeof input === 'number' ? input : Number(input?.taskId);
+        if (isNaN(taskId)) throw new Error('Invalid taskId');
+        return taskId;
+      })
       .query(async ({ ctx, input }) => {
         return await getTaskById(input, ctx.user.id);
       }),
