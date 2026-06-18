@@ -42,7 +42,7 @@ export const appRouter = router({
         if (!task) throw new Error('Task creation returned null');
         const taskId = (task as any)?.id;
         if (!taskId || taskId === 0) {
-          throw new Error(`Invalid taskId returned: ${taskId}. Task: ${JSON.stringify(task)}`);
+          throw new Error(`Invalid taskId returned: ${taskId}`);
         }
         await logTaskCreated(ctx.req, ctx.user.id, taskId, input.title);
         return { success: true, taskId };

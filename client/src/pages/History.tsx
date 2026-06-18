@@ -142,17 +142,9 @@ export default function History() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  // Delete report - call backend mutation
-                                  if (confirm('Are you sure you want to delete this report?')) {
-                                    // TODO: Add deleteReport mutation to tRPC
-                                    if (report) {
-                                      console.log('Delete report:', report.id);
-                                    }
-                                  }
-                                }}
-                                className="text-red-600 hover:bg-red-50"
+                                disabled
+                                title="Delete feature coming soon"
+                                className="text-red-600 hover:bg-red-50 opacity-50"
                               >
                                 <Trash2 className="w-4 h-4" />
                               </Button>

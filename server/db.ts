@@ -95,7 +95,7 @@ export async function createTask(userId: number, title: string, description?: st
   if (!db) throw new Error("Database not available");
   
   // Insert the task
-  await db.insert(tasks).values({
+  const insertResult = await db.insert(tasks).values({
     userId,
     title,
     description,
@@ -113,7 +113,8 @@ export async function createTask(userId: number, title: string, description?: st
     throw new Error('Failed to retrieve newly created task');
   }
   
-  return recentTasks[0];
+  const task = recentTasks[0];
+  return task;
 }
 
 export async function getTasksByUser(userId: number) {
