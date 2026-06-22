@@ -6,8 +6,7 @@ import { useParams } from "wouter";
 import { Download, Loader2, AlertCircle } from "lucide-react";
 import { useState } from "react";
 import { Streamdown } from "streamdown";
-// 📊 Rechartsライブラリをインポート
-import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, LineChart, Line, Legend } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, Legend } from "recharts";
 
 interface ReportSection {
   id: number;
@@ -71,7 +70,6 @@ export default function Report() {
   const report = reportQuery.data;
   const sections = (report.sections as ReportSection[]) || [];
   
-  // 💡 「graphs」はRechartsで個別レンダリングするため、ループから除外します
   const sectionOrder = ["conclusion", "reason", "benefits", "drawbacks", "risks", "recommendations", "sources"];
   const sectionLabels: Record<string, string> = {
     conclusion: "結論",
@@ -83,8 +81,6 @@ export default function Report() {
     sources: "出典",
   };
 
-  // 💡 データベースやAIから届いたグラフ用データをパースするロジック
-  // 万が一データが空だった場合のモック（バックエンドの進捗に合わせるための安全弁）
   const defaultGraphData = [
     { name: "現状 (2025)", value: 150, 予測値: 150 },
     { name: "導入直後 (2026)", value: 420, 予測値: 480 },
@@ -136,7 +132,7 @@ export default function Report() {
           </Card>
         )}
 
-        {/* 📊 新設：関連数値データの視覚的グラフセクション */}
+        {/* 📊 グラフセクション */}
         <Card className="border-0 shadow-lg mb-6 hover:shadow-xl transition">
           <CardHeader className="bg-gradient-to-r from-teal-50 to-teal-100 border-b border-teal-200">
             <CardTitle className="text-xl text-teal-900" style={{ fontFamily: "Playfair Display" }}>
