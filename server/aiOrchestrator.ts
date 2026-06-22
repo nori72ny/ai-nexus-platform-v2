@@ -4,6 +4,8 @@
  */
 
 import { invokeLLM } from "./_core/llm";
+// 🤖 自動ログイン＆ブラウザ操作用にPlaywrightをインポート
+import { chromium } from "playwright";
 
 export type AIService = "chatgpt" | "gemini" | "perplexity" | "genspark" | "manus";
 
@@ -26,6 +28,69 @@ interface FactCheckResult {
   commonPoints: string[];
   differences: string[];
   confidenceScores: Record<AIService, number>;
+}
+
+/**
+ * 🌟 ユーザー自身のセッション（アカウント情報）を保持したブラウザでAIを自動操縦するRPAコア関数
+ * ※完全無料で各AIのWeb版を自動操作します
+ */
+async function runRPAAutomation(service: AIService, taskDescription: string): Promise<string> {
+  // ユーザーのログインデータを保持するローカルフォルダのパス（アカウントごとに隔離）
+  const userDataDir = `./user_data_sessions/${service}`;
+  
+  const urls: Record<AIService, string> = {
+    chatgpt: "https://chatgpt.com",
+    gemini: "https://gemini.google.com",
+    perplexity: "https://www.perplexity.ai",
+    genspark: "https://www.genspark.ai",
+    manus: "https://manus.im"
+  };
+
+  // 拡張機能や既存のセッションを引き継いでブラウザを起動
+  const context = await chromium.launchPersistentContext(userDataDir, {
+    headless: false, // 初回ログインや動作検証のために画面を表示（安定したらtrueでバックグラウンド実行可能）
+    args: ['--start-maximized']
+  });
+
+  const page = await context.newPage();
+
+  try {
+    // 各AIの公式サイトへ移動
+    await page.goto(urls[service]);
+    
+    // 💡 ユーザーへのアカウント承認・初回手動ログインの待ち時間を設定
+    // ログインがまだの場合は、ここで手動ログインすると次から自動になります。
+    await page.waitForTimeout(3000); 
+
+    // ─── 各AIの入力欄と送信ボタンの自動操作処理（各サービスの最新UIに合わせて調整） ───
+    if (service === "perplexity" || service === "genspark") {
+      // 検索系AIの入力操作
+      const textarea = await page.locator('textarea[placeholder*="ask", "質問", "anything"]').first();
+      if (await textarea.isVisible()) {
+        await textarea.fill(`${taskDescription} \n必ず客観的な数値データを含め、嘘偽りのない最新情報に基づいて回答してください。`);
+        await page.keyboard.press("Enter");
+      }
+    } else {
+      // ChatGPT, Gemini, Manusなどの汎用入力操作
+      const inputField = await page.locator('div[contenteditable="true"], textarea').first();
+      if (await inputField.isVisible()) {
+        await inputField.fill(taskDescription);
+        await page.keyboard.press("Enter");
+      }
+    }
+
+    // AIが回答を出力し終えるまで少し待機（スクレイピング用）
+    await page.waitForTimeout(15000);
+
+    // 画面上の回答テキストを抽出（暫定的な全テキスト取得、各社UIに応じてセレクタを最適化可能）
+    const extractedText = await page.locator('body').innerText();
+    
+    await context.close();
+    return extractedText || "AIのWebページからデータを取得できませんでした。";
+  } catch (err) {
+    await context.close();
+    throw err;
+  }
 }
 
 /**
@@ -100,14 +165,14 @@ Respond in JSON format:
   } catch (error) {
     console.error("Routing error:", error);
     return {
-      selectedAIs: ["chatgpt", "gemini", "perplexity"],
+      selectedAIs: ["perplexity", "chatgpt"], // 嘘偽りのない最新データを重視するため初期値をPerplexity優先に
       reason: "Default routing due to routing error",
     };
   }
 }
 
 /**
- * 複数AIを並列実行
+ * 複数AIを並列実行（RPA自動操縦への切り替え）
  */
 export async function executeMultipleAIs(
   taskDescription: string,
@@ -121,22 +186,9 @@ export async function executeMultipleAIs(
     onProgress?.(service, "starting");
 
     try {
-      const response = await invokeLLM({
-        messages: [
-          {
-            role: "system",
-            content: `You are a ${service} AI assistant. Provide a comprehensive analysis of the following task.`,
-          },
-          {
-            role: "user",
-            content: taskDescription,
-          },
-        ],
-      });
-
+      // 🚀 ここで従来のAPIシミュレーションではなく、上で定義した実機RPA（自動操縦）を呼び出します
+      const result = await runRPAAutomation(service, taskDescription);
       const processingTime = Date.now() - startTime;
-      const content = response.choices[0]?.message.content;
-      const result = typeof content === "string" ? content : JSON.stringify(content);
 
       onProgress?.(service, "completed");
 
@@ -144,7 +196,7 @@ export async function executeMultipleAIs(
         service,
         result,
         processingTime,
-        confidence: 0.85,
+        confidence: 0.95, // ユーザーのアカウントで最新情報を直接取ってくるため信頼度を高く設定
         status: "success" as const,
       };
     } catch (error) {
@@ -358,3 +410,4 @@ Generate JSON with these exact sections:
     };
   }
 }
+
